@@ -40,20 +40,50 @@ jobs:
       - name: Build
         run: CGO_ENABLED=0 go build -o package/aux4-computer-linux .
 
-      - name: Start the X11 session
-        run: bash ci/session.sh
+      - name: Start Xvfb
+        run: |
+          Xvfb :99 -screen 0 1280x800x24 -nolisten tcp > /tmp/xvfb.log 2>&1 &
+          for i in $(seq 1 50); do DISPLAY=:99 xdpyinfo > /dev/null 2>&1 && break; sleep 0.1; done
+
+      - name: Start the D-Bus session bus
+        run: eval "$(dbus-launch --sh-syntax)" && echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> "$GITHUB_ENV"
+
+      - name: Enable toolkit accessibility
+        env:
+          DISPLAY: ':99'
+        run: gsettings set org.gnome.desktop.interface toolkit-accessibility true || true
+
+      - name: Enable the AT-SPI bus
+        run: |
+          dbus-send --session --dest=org.a11y.Bus --print-reply /org/a11y/bus org.freedesktop.DBus.Properties.Set \
+            string:org.a11y.Status string:IsEnabled variant:boolean:true > /dev/null || true
+
+      - name: Start openbox
+        env:
+          DISPLAY: ':99'
+        run: openbox > /tmp/openbox.log 2>&1 & sleep 1
+
+      - name: Export the desktop session env
+        run: |
+          echo "DISPLAY=:99" >> "$GITHUB_ENV"
+          echo "GTK_MODULES=gail:atk-bridge" >> "$GITHUB_ENV"
+          echo "NO_AT_BRIDGE=0" >> "$GITHUB_ENV"
+          echo "XDG_STATE_HOME=$RUNNER_TEMP/state" >> "$GITHUB_ENV"
 
       - name: Live UI test (galculator + mousepad)
         working-directory: package
-        run: bash ../ci/live.sh
+        run: aux4 test run --dir test-live
 
-      - name: Conformance (aux4/computer provider contract)
+      - name: Install aux4/computer and aux4/test
         working-directory: package
         run: |
           AUX4_REGISTRY_URL="$AUX4_DEV_REGISTRY" aux4 aux4 pkger install aux4/computer
           npm install -g jest > /dev/null
           aux4 aux4 pkger install aux4/test
-          aux4 computer conformance --provider linux
+
+      - name: Conformance (aux4/computer provider contract)
+        working-directory: package
+        run: aux4 computer conformance --provider linux
 
       - name: Capture screenshots
         if: always()
