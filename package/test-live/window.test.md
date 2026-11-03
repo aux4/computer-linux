@@ -9,6 +9,7 @@ raise (foreground-only), focus, and hide/unhide.
 
 ```beforeAll
 aux4 computer linux open mousepad --wait 15s > /dev/null
+aux4 computer linux type "aux4/computer-linux window test" --app mousepad > /dev/null
 ```
 
 ```afterAll
@@ -44,7 +45,9 @@ aux4 computer linux window list mousepad | jq -c '.windows[0].frame | {x, y}'
 
 ```execute
 sleep 0.5
-aux4 computer linux window resize --app mousepad --width 600 --height 400 --mode background | jq -c '{width: .after.frame.width, height: .after.frame.height}'
+aux4 computer linux window resize --app mousepad --width 600 --height 400 --mode background > /tmp/computer-linux-resize.json
+cat /tmp/computer-linux-resize.json >&2
+jq -c '{width: .after.frame.width, height: .after.frame.height}' /tmp/computer-linux-resize.json
 sleep 0.5
 aux4 computer linux window list mousepad | jq -c '.windows[0].frame | {width, height}'
 ```
