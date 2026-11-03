@@ -1,0 +1,74 @@
+name: Verify dev hub package
+
+# Installs aux4/computer-linux from the DEV hub (not the working copy) and runs it on a live X11 desktop:
+# info (version), the core's providers check, a background click through the provider, the same through the
+# core's OS dispatch, OCR, and the core's conformance suite against the installed package.
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: false
+        default: ''
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Expected version (empty = whatever the dev hub serves as latest)'
+        required: false
+        default: ''
+
+jobs:
+  verify-dev:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      DEV_REGISTRY: https://dev.api.hub.aux4.io/v1/packages
+      EXPECTED_VERSION: ${{ inputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install the desktop, apps and Tesseract
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends xvfb x11-utils openbox dbus-x11 at-spi2-core \
+            libatk-adaptor libgail-common gsettings-desktop-schemas dconf-cli galculator \
+            tesseract-ocr tesseract-ocr-eng fonts-dejavu-core jq > /dev/null
+
+      - name: Install aux4 CLI
+        run: |
+          curl -fsSL https://aux4.sh | sh
+          export PATH="$HOME/.aux4.config/packages/aux4/aux4:$PATH"
+          echo "$HOME/.aux4.config/packages/aux4/aux4" >> "$GITHUB_PATH"
+          curl -fsSL https://pkger.aux4.sh | sh
+          aux4 aux4 pkger --help > /dev/null
+          npm install -g jest > /dev/null
+          aux4 aux4 pkger install aux4/test
+
+      - name: Install aux4/computer-linux from the dev hub
+        run: |
+          AUX4_REGISTRY_URL="$DEV_REGISTRY" aux4 aux4 pkger install aux4/computer-linux
+          aux4 aux4 pkger list | grep -E 'aux4/computer'
+
+      - name: Start the X11 session
+        run: bash ci/session.sh
+
+      - name: Verify the installed package
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          aux4 computer linux info | tee info.json
+          jq -e '.provider == "linux" and .contract == 1 and .session == "x11" and .capabilities.background and .capabilities.ocr' info.json > /dev/null
+          if [ -n "$EXPECTED_VERSION" ]; then jq -e --arg v "$EXPECTED_VERSION" '.version == $v' info.json > /dev/null; fi
+          aux4 computer providers | tee providers.json
+          jq -e '[.providers[] | select(.provider == "linux" and .status == "ok")] | length == 1' providers.json > /dev/null
+          aux4 computer linux open galculator --wait 15s
+          REF=$(aux4 computer linux find "" --role AXButton --app galculator | jq -r '[.matches[] | select(.label == "7")][0].ref')
+          aux4 computer linux click --element "$REF" --app galculator | tee click.json
+          jq -e '.mode == "background" and .element.label == "7"' click.json > /dev/null
+          # the same through the core's OS dispatch
+          aux4 computer find 7 --role text --app galculator | tee find.json
+          jq -e '[.matches[] | select(.value == "7")] | length > 0' find.json > /dev/null
+          aux4 computer ocr --app galculator --text 7 | tee ocr.json | jq -e '.matches | length > 0' > /dev/null
+          aux4 computer linux quit galculator | jq -e '.terminated' > /dev/null
+          aux4 computer conformance --provider linux

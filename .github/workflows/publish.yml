@@ -137,59 +137,10 @@ jobs:
           registry: ${{ github.ref_name == 'dev' && 'https://dev.api.hub.aux4.io/v1/packages' || '' }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-  # Install what was just published from the dev hub (not the working copy) and run it on a live desktop:
-  # info, a background click through the provider, the same through the core's dispatch, and conformance.
+  # Install what was just published from the dev hub (not the working copy) and run it on a live desktop.
   verify-dev:
     needs: [publish]
     if: github.ref_name == 'dev'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    env:
-      AUX4_REGISTRY_URL: https://dev.api.hub.aux4.io/v1/packages
-      EXPECTED_VERSION: ${{ needs.publish.outputs.version }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Install the desktop, apps and Tesseract
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends xvfb x11-utils openbox dbus-x11 at-spi2-core \
-            libatk-adaptor libgail-common gsettings-desktop-schemas dconf-cli galculator \
-            tesseract-ocr tesseract-ocr-eng fonts-dejavu-core jq > /dev/null
-
-      - name: Install aux4 CLI
-        run: |
-          curl -fsSL https://aux4.sh | sh
-          export PATH="$HOME/.aux4.config/packages/aux4/aux4:$PATH"
-          echo "$HOME/.aux4.config/packages/aux4/aux4" >> "$GITHUB_PATH"
-          curl -fsSL https://pkger.aux4.sh | sh
-          aux4 aux4 pkger --help > /dev/null
-
-      - name: Install aux4/computer-linux from the dev hub
-        run: |
-          npm install -g jest > /dev/null
-          aux4 aux4 pkger install aux4/computer-linux aux4/test
-          aux4 aux4 pkger list | grep -E 'aux4/computer'
-
-      - name: Start the X11 session
-        run: bash ci/session.sh
-
-      - name: Verify the installed package
-        working-directory: ${{ runner.temp }}
-        run: |
-          set -euo pipefail
-          aux4 computer linux info | tee info.json
-          jq -e --arg v "$EXPECTED_VERSION" '.provider == "linux" and .contract == 1 and .version == $v and .capabilities.background and .capabilities.ocr' info.json > /dev/null
-          aux4 computer providers | tee providers.json
-          jq -e '[.providers[] | select(.provider == "linux" and .status == "ok")] | length == 1' providers.json > /dev/null
-          aux4 computer linux open galculator --wait 15s
-          REF=$(aux4 computer linux find "" --role AXButton --app galculator | jq -r '[.matches[] | select(.label == "7")][0].ref')
-          aux4 computer linux click --element "$REF" --app galculator | tee click.json
-          jq -e '.mode == "background" and .element.label == "7"' click.json > /dev/null
-          # the same through the core's OS dispatch
-          aux4 computer find 7 --role text --app galculator | tee find.json
-          jq -e '[.matches[] | select(.value == "7")] | length > 0' find.json > /dev/null
-          aux4 computer ocr --app galculator --text 7 | jq -e '.matches | length > 0' > /dev/null
-          aux4 computer linux quit galculator | jq -e '.terminated' > /dev/null
-          aux4 computer conformance --provider linux
+    uses: ./.github/workflows/verify-dev.yml
+    with:
+      version: ${{ needs.publish.outputs.version }}
