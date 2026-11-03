@@ -11,19 +11,27 @@ on:
         type: string
         required: false
         default: ''
+      registry:
+        type: string
+        required: false
+        default: 'https://dev.api.hub.aux4.io/v1/packages'
   workflow_dispatch:
     inputs:
       version:
-        description: 'Expected version (empty = whatever the dev hub serves as latest)'
+        description: 'Expected version (empty = whatever the hub serves as latest)'
         required: false
         default: ''
+      registry:
+        description: 'Package registry (dev hub by default; https://api.hub.aux4.io/v1/packages for prod)'
+        required: false
+        default: 'https://dev.api.hub.aux4.io/v1/packages'
 
 jobs:
   verify-dev:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      DEV_REGISTRY: https://dev.api.hub.aux4.io/v1/packages
+      REGISTRY: ${{ inputs.registry }}
       EXPECTED_VERSION: ${{ inputs.version }}
     steps:
       - name: Checkout repository
@@ -46,9 +54,9 @@ jobs:
           npm install -g jest > /dev/null
           aux4 aux4 pkger install aux4/test
 
-      - name: Install aux4/computer-linux from the dev hub
+      - name: Install aux4/computer-linux from the hub under test
         run: |
-          AUX4_REGISTRY_URL="$DEV_REGISTRY" aux4 aux4 pkger install aux4/computer-linux
+          AUX4_REGISTRY_URL="$REGISTRY" aux4 aux4 pkger install aux4/computer-linux
           aux4 aux4 pkger list | grep -E 'aux4/computer'
 
       - name: Start Xvfb

@@ -137,10 +137,10 @@ jobs:
           registry: ${{ github.ref_name == 'dev' && 'https://dev.api.hub.aux4.io/v1/packages' || '' }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-  # Install what was just published from the dev hub (not the working copy) and run it on a live desktop.
+  # Install what was just published from the hub it went to (not the working copy) and run it on a live desktop.
   verify-dev:
     needs: [publish]
-    if: github.ref_name == 'dev'
     uses: ./.github/workflows/verify-dev.yml
     with:
       version: ${{ needs.publish.outputs.version }}
+      registry: ${{ github.ref_name == 'dev' && 'https://dev.api.hub.aux4.io/v1/packages' || 'https://api.hub.aux4.io/v1/packages' }}
