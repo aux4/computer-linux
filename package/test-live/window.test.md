@@ -43,8 +43,9 @@ aux4 computer linux window list mousepad | jq -c '.windows[0].frame | {x, y}'
 ### should resize the window and read back the new size
 
 ```execute
+sleep 0.5
 aux4 computer linux window resize --app mousepad --width 600 --height 400 --mode background | jq -c '{width: .after.frame.width, height: .after.frame.height}'
-sleep 0.3
+sleep 0.5
 aux4 computer linux window list mousepad | jq -c '.windows[0].frame | {width, height}'
 ```
 
