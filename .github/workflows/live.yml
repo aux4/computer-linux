@@ -99,5 +99,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: live-ui
-          path: ${{ runner.temp }}/live
+          path: |
+            ${{ runner.temp }}/live
+            /tmp/computer-linux-*.json
+            /tmp/computer-linux-*.err
+            /tmp/computer-linux-live-screenshots
           if-no-files-found: warn

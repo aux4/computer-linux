@@ -45,14 +45,17 @@ aux4 computer linux cursor | jq -c '{x, y}'
 
 ## action log
 
-### should have logged click, type, window move, menu, dialog and quit from earlier live tests
+### should have logged click, type, menu, dialog and quit from earlier live tests
+
+Test files run alphabetically (annotate, calculator, dialog, editor, menu, ocr, stop, window), so
+only commands from files before this one are guaranteed to be in the log yet.
 
 ```execute
-aux4 computer linux log --limit 200 | jq -c '[.entries[].command] as $c | {click: ($c | index("click") != null), type: ($c | index("type") != null), windowMove: ($c | index("window move") != null), menu: ($c | index("menu") != null), dialog: ($c | index("dialog") != null), quit: ($c | index("quit") != null)}'
+aux4 computer linux log --limit 200 | jq -c '[.entries[].command] as $c | {click: ($c | index("click") != null), type: ($c | index("type") != null), menu: ($c | index("menu") != null), dialog: ($c | index("dialog") != null), quit: ($c | index("quit") != null)}'
 ```
 
 ```expect
-{"click":true,"type":true,"windowMove":true,"menu":true,"dialog":true,"quit":true}
+{"click":true,"type":true,"menu":true,"dialog":true,"quit":true}
 ```
 
 ## stop switch
@@ -91,7 +94,7 @@ true
 
 ```execute
 aux4 computer linux resume | jq -c '.stopped'
-R=$(aux4 computer linux find "" --role AXButton --app galculator | jq -r '[.matches[] | select(.label == "AC")][0].ref')
+R=$(aux4 computer linux find "" --role AXButton --app galculator | jq -r '[.matches[] | select(.label == "AC")][0].ref // empty')
 aux4 computer linux click --element "$R" --app galculator | jq -c '.mode'
 ```
 

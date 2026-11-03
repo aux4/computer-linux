@@ -12,7 +12,7 @@ and that clicking at an OCR-reported point lands on the right accessibility elem
 ```beforeAll
 aux4 computer linux open galculator --wait 15s > /dev/null
 for k in AC 2 5 6 '*' 7 =; do
-  R=$(aux4 computer linux find "" --role AXButton --app galculator | jq -r --arg k "$k" '[.matches[] | select(.label == $k)][0].ref')
+  R=$(aux4 computer linux find "" --role AXButton --app galculator | jq -r --arg k "$k" '[.matches[] | select(.label == $k)][0].ref // empty')
   aux4 computer linux click --element "$R" --app galculator > /dev/null
   sleep 0.2
 done

@@ -5,6 +5,20 @@ apps, background button presses, and the result appearing (wait/find), including
 read shapes. Requires a running X server with galculator and mousepad installed (see
 .github/workflows/live.yml).
 
+```timeout
+20000
+```
+
+```beforeAll
+aux4 computer linux open galculator --wait 15s > /dev/null
+aux4 computer linux open mousepad --wait 15s > /dev/null
+```
+
+```afterAll
+aux4 computer linux quit galculator --force true > /dev/null 2>&1 || true
+aux4 computer linux quit mousepad --force true > /dev/null 2>&1 || true
+```
+
 ## permissions and info
 
 ### should report every permission granted
@@ -28,20 +42,6 @@ aux4 computer linux info | jq -c '{provider, contract, session, ocr: .capabiliti
 ```
 
 ## opening galculator and mousepad
-
-```timeout
-20000
-```
-
-```beforeAll
-aux4 computer linux open galculator --wait 15s > /dev/null
-aux4 computer linux open mousepad --wait 15s > /dev/null
-```
-
-```afterAll
-aux4 computer linux quit galculator --force true > /dev/null 2>&1 || true
-aux4 computer linux quit mousepad --force true > /dev/null 2>&1 || true
-```
 
 ### should open galculator with a window title and a numeric pid
 
@@ -87,14 +87,14 @@ aux4 computer linux wait --app galculator --timeout 10s | jq -c '{source, hasMat
 
 ```execute
 for k in AC 2 5 6 '*' 7; do
-  R=$(aux4 computer linux find "" --role AXButton --app galculator | jq -r --arg k "$k" '[.matches[] | select(.label == $k)][0].ref')
+  R=$(aux4 computer linux find "" --role AXButton --app galculator | jq -r --arg k "$k" '[.matches[] | select(.label == $k)][0].ref // empty')
   aux4 computer linux click --element "$R" --app galculator > /dev/null
   sleep 0.2
 done
 aux4 computer linux wait --app galculator --text 1792 --timeout 10s > /tmp/computer-linux-wait-calc.json 2> /tmp/computer-linux-wait-calc.err &
 WP=$!
 sleep 1.5
-R=$(aux4 computer linux find "" --role AXButton --app galculator | jq -r '[.matches[] | select(.label == "=")][0].ref')
+R=$(aux4 computer linux find "" --role AXButton --app galculator | jq -r '[.matches[] | select(.label == "=")][0].ref // empty')
 aux4 computer linux click --element "$R" --app galculator > /dev/null
 WRC=0; wait "$WP" || WRC=$?
 jq -c --argjson rc "$WRC" '{rc: $rc, waited: (.waited < 10 and .waited >= 1), hasMatches: (.matches | length > 0), source}' /tmp/computer-linux-wait-calc.json

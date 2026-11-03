@@ -118,7 +118,7 @@ aux4 computer linux shortcut ctrl+a --app mousepad --mode background | jq -c '{m
 ### should set the text area's value directly
 
 ```execute
-AREA=$(aux4 computer linux find "" --role AXTextArea --app mousepad | jq -r '[.matches[] | select(.role == "text")][0].ref')
+AREA=$(aux4 computer linux find "" --role AXTextArea --app mousepad | jq -r '[.matches[] | select(.role == "text")][0].ref // empty')
 aux4 computer linux set --app mousepad --element "$AREA" --value "Set by aux4/computer-linux CI" --mode background | jq -c '{before, after, mode}'
 ```
 
@@ -173,7 +173,7 @@ aux4 computer linux clipboard read | jq -c '.text'
 ### should scroll a 300-line document in the background
 
 ```execute
-AREA=$(aux4 computer linux find "" --role AXTextArea --app mousepad | jq -r '[.matches[] | select(.role == "text")][0].ref')
+AREA=$(aux4 computer linux find "" --role AXTextArea --app mousepad | jq -r '[.matches[] | select(.role == "text")][0].ref // empty')
 LINES=$(seq 1 300 | sed 's/^/line /')
 aux4 computer linux set --app mousepad --element "$AREA" --value "$LINES" > /dev/null
 aux4 computer linux scroll --app mousepad --dy=-400 --mode background | jq -c '{mode, method, scrolled: (.vertical > 0)}'

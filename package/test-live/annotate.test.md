@@ -45,7 +45,7 @@ true
 
 ```execute
 MARK=$(jq -c '[.marks[] | select(.label == "7")][0]' /tmp/computer-linux-annotate.json)
-echo "$MARK" | jq -c '.scale as $k | ((.windowCenter.x * $k) >= .image.x and (.windowCenter.x * $k) <= (.image.x + .image.width) and (.windowCenter.y * $k) >= .image.y and (.windowCenter.y * $k) <= (.image.y + .image.height))'
+jq -c --argjson m "$MARK" '.scale as $k | (($m.windowCenter.x * $k) >= $m.image.x and ($m.windowCenter.x * $k) <= ($m.image.x + $m.image.width) and ($m.windowCenter.y * $k) >= $m.image.y and ($m.windowCenter.y * $k) <= ($m.image.y + $m.image.height))' /tmp/computer-linux-annotate.json
 ```
 
 ```expect
@@ -65,7 +65,7 @@ aux4 computer linux screenshot --app galculator --annotate true --roles all --li
 ### should click the 7 mark's ref and press the 7 button
 
 ```execute
-R=$(aux4 computer linux find "" --role AXButton --app galculator | jq -r '[.matches[] | select(.label == "AC")][0].ref')
+R=$(aux4 computer linux find "" --role AXButton --app galculator | jq -r '[.matches[] | select(.label == "AC")][0].ref // empty')
 aux4 computer linux click --element "$R" --app galculator > /dev/null
 sleep 0.3
 MARK=$(jq -c '[.marks[] | select(.label == "7")][0]' /tmp/computer-linux-annotate.json)

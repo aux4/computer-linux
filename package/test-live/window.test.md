@@ -31,6 +31,7 @@ aux4 computer linux window list mousepad | jq -c '.windows | length'
 
 ```execute
 aux4 computer linux window move --app mousepad --x 120 --y 140 --mode background | jq -c '{mode, x: .after.frame.x, y: .after.frame.y}'
+sleep 0.3
 aux4 computer linux window list mousepad | jq -c '.windows[0].frame | {x, y}'
 ```
 
@@ -43,6 +44,7 @@ aux4 computer linux window list mousepad | jq -c '.windows[0].frame | {x, y}'
 
 ```execute
 aux4 computer linux window resize --app mousepad --width 600 --height 400 --mode background | jq -c '{width: .after.frame.width, height: .after.frame.height}'
+sleep 0.3
 aux4 computer linux window list mousepad | jq -c '.windows[0].frame | {width, height}'
 ```
 
