@@ -366,7 +366,7 @@ func cmdOCR(a map[string]string) (obj, *cmdError) {
 		}
 		img = im
 		o["source"], o["path"], o["mode"] = "image", a["image"], "background"
-		o["width"], o["height"], o["scale"] = im.Bounds().Dx(), im.Bounds().Dy(), scale
+		o["width"], o["height"], o["scale"] = round1(float64(im.Bounds().Dx())/scale), round1(float64(im.Bounds().Dy())/scale), scale
 	} else {
 		type res struct {
 			c *capture

@@ -1,0 +1,67 @@
+name: Live UI test
+
+# Drives real GTK apps (galculator, mousepad) on a headless X11 desktop: Xvfb + openbox + a D-Bus
+# session with the AT-SPI accessibility bus. Then runs aux4/computer's provider conformance suite.
+# Called by ci.yml on branches and by publish.yml before publishing.
+on:
+  workflow_call:
+
+jobs:
+  test-live:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      # aux4/computer (the core this provider depends on) installs from the dev hub until it is promoted
+      AUX4_DEV_REGISTRY: https://dev.api.hub.aux4.io/v1/packages
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.23'
+
+      - name: Install the desktop, apps and Tesseract
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends xvfb x11-utils openbox dbus-x11 at-spi2-core \
+            libatk-adaptor libgail-common gsettings-desktop-schemas dconf-cli galculator mousepad \
+            tesseract-ocr tesseract-ocr-eng fonts-dejavu-core jq > /dev/null
+
+      - name: Install aux4 CLI
+        run: |
+          curl -fsSL https://aux4.sh | sh
+          echo "$HOME/.aux4.config/packages/aux4/aux4" >> "$GITHUB_PATH"
+
+      # Run from package/ so aux4 loads the package's own .aux4 (no install needed).
+      - name: Build
+        run: CGO_ENABLED=0 go build -o package/aux4-computer-linux .
+
+      - name: Start the X11 session
+        run: bash ci/session.sh
+
+      - name: Live UI test (galculator + mousepad)
+        working-directory: package
+        run: bash ../ci/live.sh
+
+      - name: Conformance (aux4/computer provider contract)
+        working-directory: package
+        run: |
+          AUX4_REGISTRY_URL="$AUX4_DEV_REGISTRY" aux4 aux4 pkger install aux4/computer
+          aux4 aux4 pkger install aux4/test
+          aux4 computer conformance --provider linux
+
+      - name: Capture screenshots
+        if: always()
+        working-directory: package
+        run: |
+          mkdir -p "$RUNNER_TEMP/live/screenshots"
+          aux4 computer linux screenshot --output "$RUNNER_TEMP/live/screenshots/final.png" || true
+
+      - name: Upload screenshots and outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-ui
+          path: ${{ runner.temp }}/live
+          if-no-files-found: warn

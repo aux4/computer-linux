@@ -1,0 +1,39 @@
+name: Test
+
+# Go unit tests and the package's .test.md tests (headless: argument validation, dry-run
+# decisions, the stop switch and action log, Wayland/no-session errors, OCR of a PNG).
+on:
+  workflow_call:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.23'
+
+      - name: Go vet and unit tests
+        run: |
+          go vet ./...
+          go test ./...
+
+      - name: Install Tesseract
+        run: sudo apt-get install -y -qq --no-install-recommends tesseract-ocr tesseract-ocr-eng jq > /dev/null
+
+      - name: Install aux4 CLI and aux4/test
+        run: |
+          curl -fsSL https://aux4.sh | sh
+          echo "$HOME/.aux4.config/packages/aux4/aux4" >> "$GITHUB_PATH"
+          export PATH="$HOME/.aux4.config/packages/aux4/aux4:$PATH"
+          aux4 aux4 pkger install aux4/test
+
+      - name: Build
+        run: CGO_ENABLED=0 go build -o package/aux4-computer-linux .
+
+      - name: Package tests
+        working-directory: package
+        run: aux4 test run

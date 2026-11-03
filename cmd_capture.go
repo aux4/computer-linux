@@ -7,6 +7,7 @@ import (
 	"image/png"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -183,6 +184,11 @@ func cmdScreenshot(a map[string]string) (obj, *cmdError) {
 	}
 	if annotate {
 		ap := c.app
+		if ap != nil && ap.A == nil {
+			if withA, err := findApp(strconv.Itoa(ap.Pid), true); err == nil {
+				ap = withA
+			}
+		}
 		if ap == nil {
 			ap, e = frontmostApp(true)
 			if e != nil {

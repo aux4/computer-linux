@@ -737,9 +737,16 @@ func cmdQuit(a map[string]string) (obj, *cmdError) {
 			o["terminated"], o["waited"] = true, secs(time.Since(start))
 			return o, nil
 		}
-		if time.Since(lastDialogCheck) > 300*time.Millisecond {
+		if time.Since(lastDialogCheck) > 400*time.Millisecond {
 			lastDialogCheck = time.Now()
-			if d := checkDialog(); d != nil {
+			ch := make(chan obj, 1)
+			go func() { ch <- checkDialog() }()
+			var d obj
+			select {
+			case d = <-ch:
+			case <-time.After(time.Until(deadline)):
+			}
+			if d != nil {
 				o["terminated"], o["dialog"], o["waited"] = false, d, secs(time.Since(start))
 				o["note"] = "the app asks before quitting: answer with dialog --app " + ap.Name + " --press <button> (it quits after \"Don't Save\"/\"Close without Saving\"), or press Cancel to keep it running"
 				return o, nil
