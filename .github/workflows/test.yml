@@ -27,6 +27,7 @@ jobs:
       - name: Install aux4 CLI and aux4/test
         run: |
           curl -fsSL https://aux4.sh | sh
+          curl -fsSL https://pkger.aux4.sh | sh
           echo "$HOME/.aux4.config/packages/aux4/aux4" >> "$GITHUB_PATH"
           export PATH="$HOME/.aux4.config/packages/aux4/aux4:$PATH"
           aux4 aux4 pkger install aux4/test

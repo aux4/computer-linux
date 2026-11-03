@@ -126,9 +126,9 @@ fails select-missing cl select --app mousepad --text "not in the text"
 cl shortcut ctrl+a --app mousepad --mode background | check shortcut-select-all '.mode == "background" and .selected == 33'
 AREA=$(cl find "" --role AXTextArea --app mousepad | jq -r '[.matches[] | select(.role == "text")][0].ref')
 cl set --app mousepad --element "$AREA" --value "Set by aux4/computer-linux CI" --mode background | check set-value ".before == \"$TEXT\" and .after == \"Set by aux4/computer-linux CI\" and .mode == \"background\""
-cl select --app mousepad --start 6 --length 2 > /dev/null
+cl select --app mousepad --start 4 --length 2 | check select-by '.selected == "by"'
 cl clipboard paste --text "BY" --app mousepad | check paste '.mode == "background" and .pasted == "BY"'
-cl find "Set BY aux4" --app mousepad | check find-pasted '.matches | length > 0'
+cl find "" --role AXTextArea --app mousepad | check find-pasted '[.matches[] | select(.role == "text")][0].value == "Set BY aux4/computer-linux CI"'
 cl clipboard copy --text "plain text" | check copy-text '.text == "plain text"'
 cl clipboard read | check clipboard-read-2 '.text == "plain text"'
 # scroll: a long document, then scroll its view in the background
