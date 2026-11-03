@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # temporary: dump what the provider sees, to shape the live assertions
 cd package
-c() { echo "### $*"; timeout 60 aux4 computer linux "$@" 2>&1 | cut -c1-2500; echo; }
+c() { echo "### $(date +%T) $*"; timeout 25 aux4 computer linux "$@" 2>&1 | cut -c1-2500; echo; }
 nohup galculator > /tmp/galculator.log 2>&1 &
 nohup mousepad > /tmp/mousepad.log 2>&1 &
 sleep 4
 aux4 computer linux find "" --role AXButton --app galculator | jq -c '[.matches[] | {label, ref}]'
 press() { REF=$(aux4 computer linux find "" --role AXButton --app galculator | jq -r --arg k "$1" '[.matches[] | select(.label == $k)][0].ref // empty'); echo "press $1 -> $REF"; [ -n "$REF" ] && aux4 computer linux click --element "$REF" --app galculator; }
 for k in AC 2 5 6 '*' x × 7; do press "$k"; done
-( c wait --app galculator --text 1792 --timeout 10s ) &
-sleep 1.5; press "="; wait
+( c wait --app galculator --text 1792 --timeout 10s ) & WP=$!
+sleep 1.5; press "="; wait $WP
 c find 1792 --app galculator
 c ocr --app galculator --text 1792
 c wait --app galculator --text 1792 --source ocr --timeout 10s
