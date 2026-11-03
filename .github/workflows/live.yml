@@ -70,16 +70,18 @@ jobs:
           echo "NO_AT_BRIDGE=0" >> "$GITHUB_ENV"
           echo "XDG_STATE_HOME=$RUNNER_TEMP/state" >> "$GITHUB_ENV"
 
+      - name: Install aux4/test
+        run: |
+          npm install -g jest > /dev/null
+          aux4 aux4 pkger install aux4/test
+
       - name: Live UI test (galculator + mousepad)
         working-directory: package
         run: aux4 test run --dir test-live
 
-      - name: Install aux4/computer and aux4/test
+      - name: Install aux4/computer
         working-directory: package
-        run: |
-          AUX4_REGISTRY_URL="$AUX4_DEV_REGISTRY" aux4 aux4 pkger install aux4/computer
-          npm install -g jest > /dev/null
-          aux4 aux4 pkger install aux4/test
+        run: AUX4_REGISTRY_URL="$AUX4_DEV_REGISTRY" aux4 aux4 pkger install aux4/computer
 
       - name: Conformance (aux4/computer provider contract)
         working-directory: package
