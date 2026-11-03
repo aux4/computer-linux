@@ -138,7 +138,7 @@ true
 ```
 
 ```execute
-aux4 computer conformance --provider linux | tail -1
+aux4 computer conformance --provider linux 2>&1 | grep -E '^Tests:'
 ```
 
 ```expect:regex
