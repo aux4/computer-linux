@@ -333,7 +333,7 @@ func menuItems(b *a11yBus, n *node) []*node {
 
 func menuEntry(b *a11yBus, n *node, depth, level int, count *int) obj {
 	*count++
-	o := obj{"title": n.label(), "ref": n.ref}
+	o := obj{"title": strings.TrimSpace(n.label()), "ref": n.ref}
 	if n.has(stChecked) {
 		o["checked"] = true
 	}
@@ -430,7 +430,7 @@ func cmdMenu(a map[string]string) (obj, *cmdError) {
 		if hit == nil {
 			var avail []string
 			for _, n := range level {
-				avail = append(avail, n.label())
+				avail = append(avail, strings.TrimSpace(n.label()))
 			}
 			where := "the menu bar"
 			if i > 0 {
@@ -439,7 +439,7 @@ func cmdMenu(a map[string]string) (obj, *cmdError) {
 			return nil, errObj(obj{"error": fmt.Sprintf("No menu item '%s' under %s. Available: %s", title, where, strings.Join(avail, ", ")), "app": ap.Name})
 		}
 		cur = hit
-		resolved = append(resolved, hit.label())
+		resolved = append(resolved, strings.TrimSpace(hit.label()))
 		if i < len(path)-1 {
 			level = menuItems(b, hit)
 		}
@@ -458,7 +458,7 @@ func cmdMenu(a map[string]string) (obj, *cmdError) {
 	if err != nil {
 		return nil, errObj(obj{"error": "Pressing the menu item failed: " + err.Error(), "app": ap.Name})
 	}
-	o := obj{"app": ap.Name, "path": resolved, "pressed": cur.label(), "ref": cur.ref, "method": act, "mode": "background"}
+	o := obj{"app": ap.Name, "path": resolved, "pressed": strings.TrimSpace(cur.label()), "ref": cur.ref, "method": act, "mode": "background"}
 	if strings.Contains(cur.role, "check") || strings.Contains(cur.role, "radio") {
 		time.Sleep(100 * time.Millisecond)
 		b.refreshStates(cur)

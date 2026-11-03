@@ -126,6 +126,11 @@ func main() {
 			fail(e)
 		}
 	}
+	if action && denyPermissions() && !(cmd == "clipboard-copy" && args["text"] != "") {
+		e := errObj(obj{"error": "Accessibility permission not granted: " + a11yGuidance, "permission": "accessibility", "command": logName(cmd)})
+		logAction(logName(cmd), args, args["app"], nil, e, started)
+		fail(e)
+	}
 	res, err := runWithWatchdog(cmd, h, args)
 	if action && !(dryRun() && err == nil) {
 		app := args["app"]

@@ -128,9 +128,7 @@ func (p permStatus) obj() obj {
 }
 
 func cmdPermissions(a map[string]string) (obj, *cmdError) {
-	o := checkPermissions().obj()
-	o["session"] = sessionType()
-	return o, nil
+	return checkPermissions().obj(), nil
 }
 
 func cmdInfo(a map[string]string) (obj, *cmdError) {
