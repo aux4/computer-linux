@@ -1,8 +1,9 @@
 name: Verify dev hub package
 
-# Installs aux4/computer-linux from the DEV hub (not the working copy) and runs it on a live X11 desktop:
-# info (version), the core's providers check, a background click through the provider, the same through the
-# core's OS dispatch, OCR, and the core's conformance suite against the installed package.
+# Installs aux4/computer-linux from the DEV hub (not the working copy), sets up a live X11 desktop
+# (Xvfb/openbox/dbus/AT-SPI), then runs ci/verify-dev/*.test.md via `aux4 test run`: info (version),
+# the core's providers check, a background click through the provider, the same through the core's
+# OS dispatch, OCR, and the core's conformance suite against the installed package.
 on:
   workflow_call:
     inputs:
@@ -80,49 +81,5 @@ jobs:
           echo "NO_AT_BRIDGE=0" >> "$GITHUB_ENV"
           echo "XDG_STATE_HOME=$RUNNER_TEMP/state" >> "$GITHUB_ENV"
 
-      - name: Verify info matches the dev hub version and capabilities
-        working-directory: ${{ runner.temp }}
-        run: |
-          aux4 computer linux info | tee info.json
-          jq -e '.provider == "linux" and .contract == 1 and .session == "x11" and .capabilities.background and .capabilities.ocr' info.json > /dev/null
-          if [ -n "$EXPECTED_VERSION" ]; then jq -e --arg v "$EXPECTED_VERSION" '.version == $v' info.json > /dev/null; fi
-
-      - name: Verify the core's providers list sees it
-        working-directory: ${{ runner.temp }}
-        run: |
-          aux4 computer providers | tee providers.json
-          jq -e '[.providers[] | select(.provider == "linux" and .status == "ok")] | length == 1' providers.json > /dev/null
-
-      - name: Open galculator and click 7 through the provider
-        working-directory: ${{ runner.temp }}
-        run: |
-          aux4 computer linux open galculator --wait 15s
-          REF=$(aux4 computer linux find "" --role AXButton --app galculator | jq -r '[.matches[] | select(.label == "7")][0].ref')
-          aux4 computer linux click --element "$REF" --app galculator | tee click.json
-          jq -e '.mode == "background" and .element.label == "7"' click.json > /dev/null
-
-      - name: Find 7 through the core's OS dispatch
-        working-directory: ${{ runner.temp }}
-        run: |
-          aux4 computer find 7 --role text --app galculator | tee find.json
-          jq -e '[.matches[] | select(.value == "7")] | length > 0' find.json > /dev/null
-
-      - name: 256 x 7 through the core's dispatch
-        working-directory: ${{ runner.temp }}
-        run: |
-          for k in AC 2 5 6 '*' 7 =; do
-            R=$(aux4 computer find "" --role AXButton --app galculator | jq -r --arg k "$k" '[.matches[] | select(.label == $k)][0].ref')
-            aux4 computer click --element "$R" --app galculator | jq -e '.mode == "background"' > /dev/null
-          done
-
-      - name: Wait (accessibility) and OCR (pixels) both see 1792
-        working-directory: ${{ runner.temp }}
-        run: |
-          aux4 computer wait --app galculator --text 1792 --timeout 10s | tee wait.json | jq -e '.matches | length > 0' > /dev/null
-          aux4 computer ocr --app galculator --text 1792 | tee ocr.json | jq -e '.matches | length > 0' > /dev/null
-
-      - name: Quit galculator and run the conformance suite
-        working-directory: ${{ runner.temp }}
-        run: |
-          aux4 computer linux quit galculator | jq -e '.terminated' > /dev/null
-          aux4 computer conformance --provider linux
+      - name: Verify the dev-hub install (info/providers/clicks/wait/ocr/conformance)
+        run: aux4 test run --dir ci/verify-dev
