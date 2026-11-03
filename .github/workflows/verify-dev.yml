@@ -69,6 +69,13 @@ jobs:
           # the same through the core's OS dispatch
           aux4 computer find 7 --role text --app galculator | tee find.json
           jq -e '[.matches[] | select(.value == "7")] | length > 0' find.json > /dev/null
-          aux4 computer ocr --app galculator --text 7 | tee ocr.json | jq -e '.matches | length > 0' > /dev/null
+          # 256 x 7 through the core's dispatch, then wait (accessibility) and OCR (pixels) for 1792
+          for k in AC 2 5 6 '*' 7 =; do
+            R=$(aux4 computer find "" --role AXButton --app galculator | jq -r --arg k "$k" '[.matches[] | select(.label == $k)][0].ref')
+            aux4 computer click --element "$R" --app galculator | jq -e '.mode == "background"' > /dev/null
+          done
+          aux4 computer wait --app galculator --text 1792 --timeout 10s | tee wait.json | jq -e '.matches | length > 0' > /dev/null
+          aux4 computer ocr --app galculator --text 1792 | tee ocr.json | jq -e '.matches | length > 0' > /dev/null
+          cat ocr.json
           aux4 computer linux quit galculator | jq -e '.terminated' > /dev/null
           aux4 computer conformance --provider linux
