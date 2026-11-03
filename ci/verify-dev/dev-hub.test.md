@@ -138,7 +138,7 @@ true
 ```
 
 ```execute
-aux4 computer conformance --provider linux 2>&1 | grep -E '^Tests:'
+aux4 computer conformance --provider linux 2>&1 | sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' | grep -E '^Tests:'
 ```
 
 ```expect:regex
