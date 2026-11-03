@@ -50,32 +50,79 @@ jobs:
           AUX4_REGISTRY_URL="$DEV_REGISTRY" aux4 aux4 pkger install aux4/computer-linux
           aux4 aux4 pkger list | grep -E 'aux4/computer'
 
-      - name: Start the X11 session
-        run: bash ci/session.sh
+      - name: Start Xvfb
+        run: |
+          Xvfb :99 -screen 0 1280x800x24 -nolisten tcp > /tmp/xvfb.log 2>&1 &
+          for i in $(seq 1 50); do DISPLAY=:99 xdpyinfo > /dev/null 2>&1 && break; sleep 0.1; done
 
-      - name: Verify the installed package
+      - name: Start the D-Bus session bus
+        run: eval "$(dbus-launch --sh-syntax)" && echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> "$GITHUB_ENV"
+
+      - name: Enable toolkit accessibility
+        env:
+          DISPLAY: ':99'
+        run: gsettings set org.gnome.desktop.interface toolkit-accessibility true || true
+
+      - name: Enable the AT-SPI bus
+        run: |
+          dbus-send --session --dest=org.a11y.Bus --print-reply /org/a11y/bus org.freedesktop.DBus.Properties.Set \
+            string:org.a11y.Status string:IsEnabled variant:boolean:true > /dev/null || true
+
+      - name: Start openbox
+        env:
+          DISPLAY: ':99'
+        run: openbox > /tmp/openbox.log 2>&1 & sleep 1
+
+      - name: Export the desktop session env
+        run: |
+          echo "DISPLAY=:99" >> "$GITHUB_ENV"
+          echo "GTK_MODULES=gail:atk-bridge" >> "$GITHUB_ENV"
+          echo "NO_AT_BRIDGE=0" >> "$GITHUB_ENV"
+          echo "XDG_STATE_HOME=$RUNNER_TEMP/state" >> "$GITHUB_ENV"
+
+      - name: Verify info matches the dev hub version and capabilities
         working-directory: ${{ runner.temp }}
         run: |
-          set -euo pipefail
           aux4 computer linux info | tee info.json
           jq -e '.provider == "linux" and .contract == 1 and .session == "x11" and .capabilities.background and .capabilities.ocr' info.json > /dev/null
           if [ -n "$EXPECTED_VERSION" ]; then jq -e --arg v "$EXPECTED_VERSION" '.version == $v' info.json > /dev/null; fi
+
+      - name: Verify the core's providers list sees it
+        working-directory: ${{ runner.temp }}
+        run: |
           aux4 computer providers | tee providers.json
           jq -e '[.providers[] | select(.provider == "linux" and .status == "ok")] | length == 1' providers.json > /dev/null
+
+      - name: Open galculator and click 7 through the provider
+        working-directory: ${{ runner.temp }}
+        run: |
           aux4 computer linux open galculator --wait 15s
           REF=$(aux4 computer linux find "" --role AXButton --app galculator | jq -r '[.matches[] | select(.label == "7")][0].ref')
           aux4 computer linux click --element "$REF" --app galculator | tee click.json
           jq -e '.mode == "background" and .element.label == "7"' click.json > /dev/null
-          # the same through the core's OS dispatch
+
+      - name: Find 7 through the core's OS dispatch
+        working-directory: ${{ runner.temp }}
+        run: |
           aux4 computer find 7 --role text --app galculator | tee find.json
           jq -e '[.matches[] | select(.value == "7")] | length > 0' find.json > /dev/null
-          # 256 x 7 through the core's dispatch, then wait (accessibility) and OCR (pixels) for 1792
+
+      - name: 256 x 7 through the core's dispatch
+        working-directory: ${{ runner.temp }}
+        run: |
           for k in AC 2 5 6 '*' 7 =; do
             R=$(aux4 computer find "" --role AXButton --app galculator | jq -r --arg k "$k" '[.matches[] | select(.label == $k)][0].ref')
             aux4 computer click --element "$R" --app galculator | jq -e '.mode == "background"' > /dev/null
           done
+
+      - name: Wait (accessibility) and OCR (pixels) both see 1792
+        working-directory: ${{ runner.temp }}
+        run: |
           aux4 computer wait --app galculator --text 1792 --timeout 10s | tee wait.json | jq -e '.matches | length > 0' > /dev/null
           aux4 computer ocr --app galculator --text 1792 | tee ocr.json | jq -e '.matches | length > 0' > /dev/null
-          cat ocr.json
+
+      - name: Quit galculator and run the conformance suite
+        working-directory: ${{ runner.temp }}
+        run: |
           aux4 computer linux quit galculator | jq -e '.terminated' > /dev/null
           aux4 computer conformance --provider linux

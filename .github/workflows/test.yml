@@ -39,4 +39,4 @@ jobs:
 
       - name: Package tests
         working-directory: package
-        run: aux4 test run
+        run: aux4 test run --dir test
