@@ -1,7 +1,7 @@
 {
   "scope": "aux4",
   "name": "computer-linux",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Computer-use for AI agents on Linux: screenshots, OCR, the AT-SPI accessibility tree, background clicks/typing/menus/fields/dialogs, input, clipboard and app/window control (X11; accessibility on Wayland)",
   "license": "Apache-2.0",
   "tags": [
