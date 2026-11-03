@@ -1,0 +1,62 @@
+{
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "build",
+          "execute": [
+            "aux4 builder all"
+          ],
+          "help": {
+            "text": "Build the app for all platforms"
+          }
+        },
+        {
+          "name": "builder",
+          "execute": [
+            "profile:builder"
+          ],
+          "help": {
+            "text": "Build the app"
+          }
+        },
+        {
+          "name": "unit",
+          "execute": [
+            "cd ${packageDir} && go test ./..."
+          ],
+          "help": {
+            "text": "Run the Go unit tests"
+          }
+        }
+      ]
+    },
+    {
+      "name": "builder",
+      "commands": [
+        {
+          "name": "linux",
+          "execute": [
+            "mkdir -p ${packageDir}/package/dist/linux/amd64 ${packageDir}/package/dist/linux/arm64 ${packageDir}/package/dist/linux/386",
+            "cd ${packageDir} && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o package/dist/linux/amd64/aux4-computer-linux .",
+            "cd ${packageDir} && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags='-s -w' -o package/dist/linux/arm64/aux4-computer-linux .",
+            "cd ${packageDir} && CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -trimpath -ldflags='-s -w' -o package/dist/linux/386/aux4-computer-linux ."
+          ],
+          "help": {
+            "text": "Build the app for linux (amd64, arm64, 386)"
+          }
+        },
+        {
+          "name": "all",
+          "execute": [
+            "aux4 builder linux"
+          ],
+          "help": {
+            "text": "Build the app for all platforms (linux only)"
+          }
+        }
+      ]
+    }
+  ]
+}

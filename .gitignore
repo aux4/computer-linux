@@ -1,0 +1,7 @@
+.DS_Store
+package/aux4-computer-linux
+package/dist/
+package/*.zip
+*.zip
+/aux4-computer-linux
+/computer-linux

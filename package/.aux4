@@ -1,0 +1,1320 @@
+{
+  "scope": "aux4",
+  "name": "computer-linux",
+  "version": "0.1.0",
+  "description": "Computer-use for AI agents on Linux: screenshots, OCR, the AT-SPI accessibility tree, background clicks/typing/menus/fields/dialogs, input, clipboard and app/window control (X11; accessibility on Wayland)",
+  "license": "Apache-2.0",
+  "tags": [
+    "aux4",
+    "linux",
+    "computer-use",
+    "accessibility",
+    "at-spi",
+    "x11",
+    "automation",
+    "agent"
+  ],
+  "dependencies": [
+    "aux4/computer"
+  ],
+  "system": [
+    [
+      "test:tesseract --version",
+      "apt:tesseract-ocr",
+      "dnf:tesseract",
+      "apk:tesseract-ocr",
+      "brew:tesseract"
+    ]
+  ],
+  "profiles": [
+    {
+      "name": "main",
+      "commands": [
+        {
+          "name": "computer",
+          "execute": [
+            "profile:computer"
+          ],
+          "help": {
+            "text": "Computer-use: see and act on the screen"
+          }
+        }
+      ]
+    },
+    {
+      "name": "computer",
+      "commands": [
+        {
+          "name": "linux",
+          "execute": [
+            "profile:computer:linux"
+          ],
+          "help": {
+            "text": "Computer-use on Linux (X11 + AT-SPI)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "computer:linux",
+      "commands": [
+        {
+          "name": "info",
+          "execute": [
+            "${packageDir}/aux4-computer-linux info"
+          ],
+          "help": {
+            "text": "Provider info: contract version, platform, session type, capabilities and permissions"
+          }
+        },
+        {
+          "name": "notes",
+          "execute": [
+            "cat ${packageDir}/notes.md"
+          ],
+          "help": {
+            "text": "Platform notes for agents: X11/Wayland, AT-SPI, background limits, gotchas"
+          }
+        },
+        {
+          "name": "permissions",
+          "execute": [
+            "${packageDir}/aux4-computer-linux permissions"
+          ],
+          "help": {
+            "text": "Check the accessibility bus (AT-SPI), screen capture and input (XTEST)"
+          }
+        },
+        {
+          "name": "screenshot",
+          "execute": [
+            "${packageDir}/aux4-computer-linux screenshot values(output, display, app, maxWidth, annotate, roles, limit)"
+          ],
+          "help": {
+            "text": "Capture the screen or an app's window (even when covered) to a PNG; --annotate draws numbered element marks",
+            "variables": [
+              {
+                "name": "output",
+                "text": "File path to save the PNG to (default: a temp file)",
+                "default": ""
+              },
+              {
+                "name": "display",
+                "text": "Display index to capture (see screen)",
+                "default": "0"
+              },
+              {
+                "name": "app",
+                "text": "Capture this app's front window instead of a display",
+                "default": ""
+              },
+              {
+                "name": "maxWidth",
+                "text": "Resize down if wider than this, preserving aspect ratio",
+                "default": "1568"
+              },
+              {
+                "name": "annotate",
+                "text": "Draw numbered boxes on the elements and return them as marks",
+                "default": "false",
+                "options": [
+                  "false",
+                  "true"
+                ]
+              },
+              {
+                "name": "roles",
+                "text": "With --annotate: actionable or all",
+                "default": "actionable",
+                "options": [
+                  "actionable",
+                  "all"
+                ]
+              },
+              {
+                "name": "limit",
+                "text": "With --annotate: most marks to draw",
+                "default": "150"
+              }
+            ]
+          }
+        },
+        {
+          "name": "ocr",
+          "execute": [
+            "${packageDir}/aux4-computer-linux ocr values(app, image, text, level, languages, mode, scale, timeout)"
+          ],
+          "help": {
+            "text": "Recognize the text in pixels (screen, an app's window or a PNG) with Tesseract; each line with its position",
+            "variables": [
+              {
+                "name": "app",
+                "text": "Read this app's front window instead of the main display",
+                "default": ""
+              },
+              {
+                "name": "image",
+                "text": "Recognize an existing PNG instead of capturing",
+                "default": ""
+              },
+              {
+                "name": "text",
+                "text": "Only return lines containing this text (ignores case, whitespace and commas)",
+                "default": ""
+              },
+              {
+                "name": "level",
+                "text": "accurate or fast",
+                "default": "accurate",
+                "options": [
+                  "accurate",
+                  "fast"
+                ]
+              },
+              {
+                "name": "languages",
+                "text": "Comma-separated languages, e.g. en-US,pt-BR (default: English)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (background, falling back to real input), background (error instead of falling back) or foreground (real input)",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              },
+              {
+                "name": "scale",
+                "text": "With --image: image pixels per point",
+                "default": "1"
+              },
+              {
+                "name": "timeout",
+                "text": "Give up with a JSON error after this long",
+                "default": "60s"
+              }
+            ]
+          }
+        },
+        {
+          "name": "wait",
+          "execute": [
+            "${packageDir}/aux4-computer-linux wait values(text, role, app, gone, source, timeout, interval)"
+          ],
+          "help": {
+            "text": "Wait until text, an element or an app window appears (or is gone), checking accessibility then OCR",
+            "variables": [
+              {
+                "name": "text",
+                "text": "Text to wait for",
+                "default": "",
+                "arg": true
+              },
+              {
+                "name": "role",
+                "text": "Only elements with this role (AT-SPI or macOS AX names)",
+                "default": ""
+              },
+              {
+                "name": "app",
+                "text": "App to watch; alone, wait for it to have an on-screen window",
+                "default": ""
+              },
+              {
+                "name": "gone",
+                "text": "true to wait until it's no longer there",
+                "default": "false",
+                "options": [
+                  "false",
+                  "true"
+                ]
+              },
+              {
+                "name": "source",
+                "text": "auto, ax (accessibility only) or ocr (pixels only)",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "ax",
+                  "ocr"
+                ]
+              },
+              {
+                "name": "timeout",
+                "text": "How long to wait",
+                "default": "10s"
+              },
+              {
+                "name": "interval",
+                "text": "Pause between checks",
+                "default": "500ms"
+              }
+            ]
+          }
+        },
+        {
+          "name": "read",
+          "execute": [
+            "${packageDir}/aux4-computer-linux read values(app, depth)"
+          ],
+          "help": {
+            "text": "Read an app's accessibility tree (AT-SPI) as a flat element list",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App name, WM_CLASS, process name or pid (default: the frontmost app)",
+                "default": ""
+              },
+              {
+                "name": "depth",
+                "text": "Maximum tree depth",
+                "default": "10"
+              }
+            ]
+          }
+        },
+        {
+          "name": "find",
+          "execute": [
+            "${packageDir}/aux4-computer-linux find values(text, role, app)"
+          ],
+          "help": {
+            "text": "Find accessibility elements by text and/or role",
+            "variables": [
+              {
+                "name": "text",
+                "text": "Text to search for in labels and values",
+                "default": "",
+                "arg": true
+              },
+              {
+                "name": "role",
+                "text": "Role filter (AT-SPI names like 'push button', or macOS AX names like AXButton)",
+                "default": ""
+              },
+              {
+                "name": "app",
+                "text": "App name, WM_CLASS, process name or pid (default: the frontmost app)",
+                "default": ""
+              }
+            ]
+          }
+        },
+        {
+          "name": "click",
+          "execute": [
+            "${packageDir}/aux4-computer-linux click values(x, y, button, count, element, app, mode)"
+          ],
+          "help": {
+            "text": "Click an element (in the background through AT-SPI) or a point",
+            "variables": [
+              {
+                "name": "x",
+                "text": "X coordinate (window-relative with --app, screen pixels without)",
+                "default": ""
+              },
+              {
+                "name": "y",
+                "text": "Y coordinate (window-relative with --app, screen pixels without)",
+                "default": ""
+              },
+              {
+                "name": "button",
+                "text": "left or right",
+                "default": "left"
+              },
+              {
+                "name": "count",
+                "text": "Click count, e.g. 2 for a double-click",
+                "default": "1"
+              },
+              {
+                "name": "element",
+                "text": "Element ref from find/read/state to press",
+                "default": ""
+              },
+              {
+                "name": "app",
+                "text": "App name, WM_CLASS, process name or pid (default: the frontmost app)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (background, falling back to real input), background (error instead of falling back) or foreground (real input)",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "move",
+          "execute": [
+            "${packageDir}/aux4-computer-linux move values(x, y)"
+          ],
+          "help": {
+            "text": "Move the mouse pointer (real input)",
+            "variables": [
+              {
+                "name": "x",
+                "text": "X in screen pixels"
+              },
+              {
+                "name": "y",
+                "text": "Y in screen pixels"
+              }
+            ]
+          }
+        },
+        {
+          "name": "drag",
+          "execute": [
+            "${packageDir}/aux4-computer-linux drag values(x, y, toX, toY)"
+          ],
+          "help": {
+            "text": "Drag with the mouse from one point to another (real input)",
+            "variables": [
+              {
+                "name": "x",
+                "text": "Start X"
+              },
+              {
+                "name": "y",
+                "text": "Start Y"
+              },
+              {
+                "name": "toX",
+                "text": "End X"
+              },
+              {
+                "name": "toY",
+                "text": "End Y"
+              }
+            ]
+          }
+        },
+        {
+          "name": "type",
+          "execute": [
+            "${packageDir}/aux4-computer-linux type values(text, delay, app, mode)"
+          ],
+          "help": {
+            "text": "Type text into the app's focused text element (in the background through AT-SPI)",
+            "variables": [
+              {
+                "name": "text",
+                "text": "Text to type",
+                "arg": true
+              },
+              {
+                "name": "delay",
+                "text": "Milliseconds to wait before typing",
+                "default": "0"
+              },
+              {
+                "name": "app",
+                "text": "App name, WM_CLASS, process name or pid (default: the frontmost app)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (background, falling back to real input), background (error instead of falling back) or foreground (real input)",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "shortcut",
+          "execute": [
+            "${packageDir}/aux4-computer-linux shortcut values(keys, delay, app, mode)"
+          ],
+          "help": {
+            "text": "Press a key combo, e.g. ctrl+s (cmd works as ctrl); with --app, through the app's menu in the background",
+            "variables": [
+              {
+                "name": "keys",
+                "text": "Key combo, e.g. ctrl+shift+s or enter",
+                "arg": true
+              },
+              {
+                "name": "delay",
+                "text": "Milliseconds to wait before pressing",
+                "default": "0"
+              },
+              {
+                "name": "app",
+                "text": "Run the shortcut in this app (default: system-wide, real keys)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (background, falling back to real input), background (error instead of falling back) or foreground (real input)",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "scroll",
+          "execute": [
+            "${packageDir}/aux4-computer-linux scroll values(x, y, dx, dy, app, mode)"
+          ],
+          "help": {
+            "text": "Scroll a scroll area (in the background by moving its scroll bar through AT-SPI)",
+            "variables": [
+              {
+                "name": "x",
+                "text": "X to scroll at (window-relative with --app)",
+                "default": ""
+              },
+              {
+                "name": "y",
+                "text": "Y to scroll at (window-relative with --app)",
+                "default": ""
+              },
+              {
+                "name": "dx",
+                "text": "Horizontal delta in pixels",
+                "default": "0"
+              },
+              {
+                "name": "dy",
+                "text": "Vertical delta in pixels, negative scrolls down",
+                "default": "0"
+              },
+              {
+                "name": "app",
+                "text": "App name, WM_CLASS, process name or pid (default: the frontmost app)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (background, falling back to real input), background (error instead of falling back) or foreground (real input)",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "cursor",
+          "execute": [
+            "${packageDir}/aux4-computer-linux cursor"
+          ],
+          "help": {
+            "text": "Get the mouse pointer position"
+          }
+        },
+        {
+          "name": "screen",
+          "execute": [
+            "${packageDir}/aux4-computer-linux screen"
+          ],
+          "help": {
+            "text": "List displays (RandR monitors) with bounds and scale"
+          }
+        },
+        {
+          "name": "apps",
+          "execute": [
+            "${packageDir}/aux4-computer-linux apps"
+          ],
+          "help": {
+            "text": "List running apps with windows or an accessibility tree"
+          }
+        },
+        {
+          "name": "windows",
+          "execute": [
+            "${packageDir}/aux4-computer-linux windows"
+          ],
+          "help": {
+            "text": "List on-screen windows of every app"
+          }
+        },
+        {
+          "name": "window",
+          "execute": [
+            "profile:computer:linux:window"
+          ],
+          "help": {
+            "text": "Window commands: list, move, resize, minimize, restore, close, fullscreen, raise"
+          }
+        },
+        {
+          "name": "quit",
+          "execute": [
+            "${packageDir}/aux4-computer-linux quit values(app, force, timeout)"
+          ],
+          "help": {
+            "text": "Quit an app by closing its windows (or --force to terminate it)",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App name, WM_CLASS or pid",
+                "arg": true
+              },
+              {
+                "name": "force",
+                "text": "Terminate the process; unsaved changes are lost",
+                "default": "false",
+                "options": [
+                  "false",
+                  "true"
+                ]
+              },
+              {
+                "name": "timeout",
+                "text": "How long to wait for it to exit",
+                "default": "5s"
+              }
+            ]
+          }
+        },
+        {
+          "name": "hide",
+          "execute": [
+            "${packageDir}/aux4-computer-linux hide values(app)"
+          ],
+          "help": {
+            "text": "Minimize all of an app's windows without activating anything",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App name, WM_CLASS or pid",
+                "arg": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "unhide",
+          "execute": [
+            "${packageDir}/aux4-computer-linux unhide values(app)"
+          ],
+          "help": {
+            "text": "Restore an app's minimized windows without bringing it to the front",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App name, WM_CLASS or pid",
+                "arg": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "open",
+          "execute": [
+            "${packageDir}/aux4-computer-linux open values(app, mode, file, url, wait, hidden)"
+          ],
+          "help": {
+            "text": "Launch an app (desktop id, name or executable), or open a file or URL, without taking focus",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App: desktop id, name or executable",
+                "default": "",
+                "arg": true
+              },
+              {
+                "name": "mode",
+                "text": "auto (background, falling back to real input), background (error instead of falling back) or foreground (real input)",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              },
+              {
+                "name": "file",
+                "text": "File to open",
+                "default": ""
+              },
+              {
+                "name": "url",
+                "text": "URL to open",
+                "default": ""
+              },
+              {
+                "name": "wait",
+                "text": "Wait up to this long for the window, e.g. 10s",
+                "default": ""
+              },
+              {
+                "name": "hidden",
+                "text": "true to minimize the new window once it appears",
+                "default": "false",
+                "options": [
+                  "false",
+                  "true"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "focus",
+          "execute": [
+            "${packageDir}/aux4-computer-linux focus values(app)"
+          ],
+          "help": {
+            "text": "Bring an app's window to the front (foreground)",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App name, WM_CLASS or pid",
+                "arg": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "state",
+          "execute": [
+            "${packageDir}/aux4-computer-linux state values(app, depth, limit)"
+          ],
+          "help": {
+            "text": "One call: frontmost app, target app, windows, focused element, dialog and a compact element tree",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App name, WM_CLASS, process name or pid (default: the frontmost app)",
+                "default": ""
+              },
+              {
+                "name": "depth",
+                "text": "Levels of actionable/text elements (0 = no tree)",
+                "default": "3"
+              },
+              {
+                "name": "limit",
+                "text": "Maximum number of elements",
+                "default": "120"
+              }
+            ]
+          }
+        },
+        {
+          "name": "menu",
+          "execute": [
+            "${packageDir}/aux4-computer-linux menu values(app, path, depth, mode)"
+          ],
+          "help": {
+            "text": "List an app's menu bar, or press a menu item by path (in the background through AT-SPI)",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App name, WM_CLASS, process name or pid (default: the frontmost app)",
+                "default": ""
+              },
+              {
+                "name": "path",
+                "text": "Menu item to press, titles separated by >, e.g. 'View > Scientific'",
+                "default": ""
+              },
+              {
+                "name": "depth",
+                "text": "Menu levels to list",
+                "default": "2"
+              },
+              {
+                "name": "mode",
+                "text": "auto (background, falling back to real input), background (error instead of falling back) or foreground (real input)",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "select",
+          "execute": [
+            "${packageDir}/aux4-computer-linux select values(app, all, text, occurrence, start, length, element, mode)"
+          ],
+          "help": {
+            "text": "Select text in a text element through AT-SPI",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App name, WM_CLASS, process name or pid (default: the frontmost app)",
+                "default": ""
+              },
+              {
+                "name": "all",
+                "text": "true to select all the text",
+                "default": "false",
+                "options": [
+                  "false",
+                  "true"
+                ]
+              },
+              {
+                "name": "text",
+                "text": "Text to select",
+                "default": ""
+              },
+              {
+                "name": "occurrence",
+                "text": "Which match of --text",
+                "default": ""
+              },
+              {
+                "name": "start",
+                "text": "First character of the range (from 0)",
+                "default": ""
+              },
+              {
+                "name": "length",
+                "text": "Number of characters",
+                "default": ""
+              },
+              {
+                "name": "element",
+                "text": "Text element ref (default: the focused text element)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (background, falling back to real input), background (error instead of falling back) or foreground (real input)",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "set",
+          "execute": [
+            "${packageDir}/aux4-computer-linux set values(app, element, value, checked, option, mode)"
+          ],
+          "help": {
+            "text": "Set a field's value, a checkbox state or an option through AT-SPI",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App name, WM_CLASS, process name or pid (default: the frontmost app)",
+                "default": ""
+              },
+              {
+                "name": "element",
+                "text": "Element ref (required)",
+                "default": ""
+              },
+              {
+                "name": "value",
+                "text": "New value for a text field, text area or slider",
+                "default": ""
+              },
+              {
+                "name": "checked",
+                "text": "true or false for a checkbox, toggle or radio button",
+                "default": ""
+              },
+              {
+                "name": "option",
+                "text": "Option title for a combo box, radio group or tab list",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (background, falling back to real input), background (error instead of falling back) or foreground (real input)",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "dialog",
+          "execute": [
+            "${packageDir}/aux4-computer-linux dialog values(app, press, mode)"
+          ],
+          "help": {
+            "text": "Describe an app's open dialog or alert, or press one of its buttons",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App to check (default: the frontmost app, then every app)",
+                "default": ""
+              },
+              {
+                "name": "press",
+                "text": "Title of the button to press",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (background, falling back to real input), background (error instead of falling back) or foreground (real input)",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "log",
+          "execute": [
+            "${packageDir}/aux4-computer-linux log values(limit)"
+          ],
+          "help": {
+            "text": "Show the most recent entries of the shared action log",
+            "variables": [
+              {
+                "name": "limit",
+                "text": "Number of entries to show",
+                "default": "20"
+              }
+            ]
+          }
+        },
+        {
+          "name": "stop",
+          "execute": [
+            "${packageDir}/aux4-computer-linux stop"
+          ],
+          "help": {
+            "text": "Turn on the shared stop switch: input and state-changing commands refuse until resume"
+          }
+        },
+        {
+          "name": "resume",
+          "execute": [
+            "${packageDir}/aux4-computer-linux resume"
+          ],
+          "help": {
+            "text": "Turn off the shared stop switch"
+          }
+        },
+        {
+          "name": "clipboard",
+          "execute": [
+            "profile:computer:linux:clipboard"
+          ],
+          "help": {
+            "text": "Clipboard commands: copy, paste, read"
+          }
+        }
+      ]
+    },
+    {
+      "name": "computer:linux:window",
+      "commands": [
+        {
+          "name": "list",
+          "execute": [
+            "${packageDir}/aux4-computer-linux window list values(app)"
+          ],
+          "help": {
+            "text": "List an app's windows (including minimized ones)",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App whose windows to list (default: the frontmost app)",
+                "default": "",
+                "arg": true
+              }
+            ]
+          }
+        },
+        {
+          "name": "move",
+          "execute": [
+            "${packageDir}/aux4-computer-linux window move values(app, title, index, mode, x, y)"
+          ],
+          "help": {
+            "text": "Move a window's top-left corner to --x/--y",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App whose window to use (default: the frontmost app)",
+                "default": ""
+              },
+              {
+                "name": "title",
+                "text": "Window title: exact match first, then contained (case-insensitive). Default: the app's front window",
+                "default": ""
+              },
+              {
+                "name": "index",
+                "text": "Window index from window list (instead of --title)",
+                "default": ""
+              },
+              {
+                "name": "x",
+                "text": "Screen x of the window content's top-left corner",
+                "default": ""
+              },
+              {
+                "name": "y",
+                "text": "Screen y of the window content's top-left corner",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (background, falling back to real input), background (error instead of falling back) or foreground (real input)",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "resize",
+          "execute": [
+            "${packageDir}/aux4-computer-linux window resize values(app, title, index, mode, width, height)"
+          ],
+          "help": {
+            "text": "Resize a window",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App whose window to use (default: the frontmost app)",
+                "default": ""
+              },
+              {
+                "name": "title",
+                "text": "Window title: exact match first, then contained (case-insensitive). Default: the app's front window",
+                "default": ""
+              },
+              {
+                "name": "index",
+                "text": "Window index from window list (instead of --title)",
+                "default": ""
+              },
+              {
+                "name": "width",
+                "text": "New width in pixels (default: keep)",
+                "default": ""
+              },
+              {
+                "name": "height",
+                "text": "New height in pixels (default: keep)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (background, falling back to real input), background (error instead of falling back) or foreground (real input)",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "minimize",
+          "execute": [
+            "${packageDir}/aux4-computer-linux window minimize values(app, title, index, mode)"
+          ],
+          "help": {
+            "text": "Minimize a window",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App whose window to use (default: the frontmost app)",
+                "default": ""
+              },
+              {
+                "name": "title",
+                "text": "Window title: exact match first, then contained (case-insensitive). Default: the app's front window",
+                "default": ""
+              },
+              {
+                "name": "index",
+                "text": "Window index from window list (instead of --title)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (background, falling back to real input), background (error instead of falling back) or foreground (real input)",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "restore",
+          "execute": [
+            "${packageDir}/aux4-computer-linux window restore values(app, title, index, mode)"
+          ],
+          "help": {
+            "text": "Restore a minimized window without bringing it to the front",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App whose window to use (default: the frontmost app)",
+                "default": ""
+              },
+              {
+                "name": "title",
+                "text": "Window title: exact match first, then contained (case-insensitive). Default: the app's front window",
+                "default": ""
+              },
+              {
+                "name": "index",
+                "text": "Window index from window list (instead of --title)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (background, falling back to real input), background (error instead of falling back) or foreground (real input)",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "close",
+          "execute": [
+            "${packageDir}/aux4-computer-linux window close values(app, title, index, mode)"
+          ],
+          "help": {
+            "text": "Close a window (an unsaved document's question is returned as dialog)",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App whose window to use (default: the frontmost app)",
+                "default": ""
+              },
+              {
+                "name": "title",
+                "text": "Window title: exact match first, then contained (case-insensitive). Default: the app's front window",
+                "default": ""
+              },
+              {
+                "name": "index",
+                "text": "Window index from window list (instead of --title)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (background, falling back to real input), background (error instead of falling back) or foreground (real input)",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "fullscreen",
+          "execute": [
+            "${packageDir}/aux4-computer-linux window fullscreen values(app, title, index, mode, enabled)"
+          ],
+          "help": {
+            "text": "Enter (true) or leave (false) full screen",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App whose window to use (default: the frontmost app)",
+                "default": ""
+              },
+              {
+                "name": "title",
+                "text": "Window title: exact match first, then contained (case-insensitive). Default: the app's front window",
+                "default": ""
+              },
+              {
+                "name": "index",
+                "text": "Window index from window list (instead of --title)",
+                "default": ""
+              },
+              {
+                "name": "enabled",
+                "text": "true to enter full screen, false to leave it",
+                "default": "true",
+                "arg": true,
+                "options": [
+                  "true",
+                  "false"
+                ]
+              },
+              {
+                "name": "mode",
+                "text": "auto (background, falling back to real input), background (error instead of falling back) or foreground (real input)",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "raise",
+          "execute": [
+            "${packageDir}/aux4-computer-linux window raise values(app, title, index, mode)"
+          ],
+          "help": {
+            "text": "Raise a window and bring its app to the front (foreground)",
+            "variables": [
+              {
+                "name": "app",
+                "text": "App whose window to use (default: the frontmost app)",
+                "default": ""
+              },
+              {
+                "name": "title",
+                "text": "Window title: exact match first, then contained (case-insensitive). Default: the app's front window",
+                "default": ""
+              },
+              {
+                "name": "index",
+                "text": "Window index from window list (instead of --title)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (background, falling back to real input), background (error instead of falling back) or foreground (real input)",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "computer:linux:clipboard",
+      "commands": [
+        {
+          "name": "copy",
+          "execute": [
+            "${packageDir}/aux4-computer-linux clipboard copy values(text, app, mode)"
+          ],
+          "help": {
+            "text": "Copy --text, or the app's selected text, to the clipboard",
+            "variables": [
+              {
+                "name": "text",
+                "text": "Text to put on the clipboard; omit to copy the app's selection",
+                "default": ""
+              },
+              {
+                "name": "app",
+                "text": "App name, WM_CLASS, process name or pid (default: the frontmost app)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (background, falling back to real input), background (error instead of falling back) or foreground (real input)",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "paste",
+          "execute": [
+            "${packageDir}/aux4-computer-linux clipboard paste values(text, app, mode)"
+          ],
+          "help": {
+            "text": "Paste the clipboard (or --text) into the app's focused text element",
+            "variables": [
+              {
+                "name": "text",
+                "text": "Text to put on the clipboard before pasting",
+                "default": ""
+              },
+              {
+                "name": "app",
+                "text": "App name, WM_CLASS, process name or pid (default: the frontmost app)",
+                "default": ""
+              },
+              {
+                "name": "mode",
+                "text": "auto (background, falling back to real input), background (error instead of falling back) or foreground (real input)",
+                "default": "auto",
+                "options": [
+                  "auto",
+                  "background",
+                  "foreground"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "read",
+          "execute": [
+            "${packageDir}/aux4-computer-linux clipboard read"
+          ],
+          "help": {
+            "text": "Read the clipboard text"
+          }
+        }
+      ]
+    }
+  ]
+}
