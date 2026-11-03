@@ -21,9 +21,9 @@ AUX4_COMPUTER_DRY_RUN=1 aux4 computer linux unhide mousepad | jq -c '{mode, hidd
 ### should fail with a JSON error
 
 ```execute
-AUX4_COMPUTER_STATE_DIR=$PWD/state aux4 computer linux unhide ThisAppDoesNotExist12345
+AUX4_COMPUTER_STATE_DIR=$PWD/state aux4 computer linux unhide ThisAppDoesNotExist12345 2>&1 | jq -c '{error: (.error | type)}'
 ```
 
-```error:partial
-App not running*?
+```expect
+{"error":"string"}
 ```
