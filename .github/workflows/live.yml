@@ -51,6 +51,7 @@ jobs:
         working-directory: package
         run: |
           AUX4_REGISTRY_URL="$AUX4_DEV_REGISTRY" aux4 aux4 pkger install aux4/computer
+          npm install -g jest > /dev/null
           aux4 aux4 pkger install aux4/test
           aux4 computer conformance --provider linux
 

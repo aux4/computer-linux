@@ -168,6 +168,7 @@ jobs:
 
       - name: Install aux4/computer-linux from the dev hub
         run: |
+          npm install -g jest > /dev/null
           aux4 aux4 pkger install aux4/computer-linux aux4/test
           aux4 aux4 pkger list | grep -E 'aux4/computer'
 
