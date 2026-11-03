@@ -1,0 +1,194 @@
+name: Publish Package
+
+# main -> prod hub (token minted from AUX4_PUBLISHER_* client credentials against prod SSO; default registry)
+# dev  -> dev hub  (token minted from AUX4_DEV_PUBLISHER_* client credentials against dev SSO; registry pointed at
+#         the dev hub), then the published package is installed from the dev hub and run on a live X11 desktop.
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - '**'
+      - '!.github/**'
+      - '!README.md'
+      - '!LICENSE'
+      - '!.gitignore'
+
+  workflow_dispatch:
+    inputs:
+      level:
+        description: 'Release level (patch, minor, major)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+concurrency:
+  group: publish-package-${{ github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Lint
+        uses: aux4/action@v1
+        with:
+          command: lint
+          strict: 'true'
+
+  test:
+    needs: [lint]
+    uses: ./.github/workflows/test.yml
+
+  # Live UI test + provider conformance on a headless X11 desktop (live.yml). Publishing waits on it.
+  test-live:
+    needs: [lint]
+    uses: ./.github/workflows/live.yml
+
+  build:
+    needs: [lint]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.23'
+
+      - name: Build linux binaries
+        run: |
+          for arch in amd64 arm64 386; do
+            mkdir -p package/dist/linux/$arch
+            CGO_ENABLED=0 GOOS=linux GOARCH=$arch go build -trimpath -ldflags='-s -w' -o package/dist/linux/$arch/aux4-computer-linux .
+          done
+          file package/dist/linux/*/aux4-computer-linux
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: package/dist
+          if-no-files-found: error
+
+  publish:
+    needs: [test, test-live, build]
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.publish.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: package/dist
+
+      - name: Restore executable bit
+        run: chmod +x package/dist/linux/*/aux4-computer-linux
+
+      - name: Mint prod hub publish token
+        id: mint
+        if: github.ref_name == 'main'
+        env:
+          CLIENT_ID: ${{ secrets.AUX4_PUBLISHER_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.AUX4_PUBLISHER_CLIENT_SECRET }}
+        run: |
+          if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then echo "::error::publisher client id/secret not set"; exit 1; fi
+          TOK=$(curl -sf -u "$CLIENT_ID:$CLIENT_SECRET" -d grant_type=client_credentials https://sso.aux4.io/token | jq -r '.access_token // empty')
+          if [ -z "$TOK" ]; then echo "::error::client_credentials mint returned no access_token"; exit 1; fi
+          echo "::add-mask::$TOK"; echo "token=$TOK" >> "$GITHUB_OUTPUT"
+
+      # The dev hub is validated by dev SSO, so a prod token is rejected there.
+      - name: Mint dev hub publish token
+        id: devmint
+        if: github.ref_name == 'dev'
+        env:
+          CLIENT_ID: ${{ secrets.AUX4_DEV_PUBLISHER_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.AUX4_DEV_PUBLISHER_CLIENT_SECRET }}
+        run: |
+          if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then echo "::error::dev publisher client id/secret not set"; exit 1; fi
+          TOK=$(curl -sf -u "$CLIENT_ID:$CLIENT_SECRET" -d grant_type=client_credentials https://dev.sso.aux4.io/token | jq -r '.access_token // empty')
+          if [ -z "$TOK" ]; then echo "::error::client_credentials mint returned no access_token from dev SSO"; exit 1; fi
+          echo "::add-mask::$TOK"; echo "token=$TOK" >> "$GITHUB_OUTPUT"
+
+      - name: Publish package
+        id: publish
+        uses: aux4/action@v1
+        with:
+          command: publish
+          level: ${{ inputs.level || 'patch' }}
+          aux4_token: ${{ github.ref_name == 'dev' && steps.devmint.outputs.token || steps.mint.outputs.token }}
+          registry: ${{ github.ref_name == 'dev' && 'https://dev.api.hub.aux4.io/v1/packages' || '' }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  # Install what was just published from the dev hub (not the working copy) and run it on a live desktop:
+  # info, a background click through the provider, the same through the core's dispatch, and conformance.
+  verify-dev:
+    needs: [publish]
+    if: github.ref_name == 'dev'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      AUX4_REGISTRY_URL: https://dev.api.hub.aux4.io/v1/packages
+      EXPECTED_VERSION: ${{ needs.publish.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install the desktop, apps and Tesseract
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends xvfb x11-utils openbox dbus-x11 at-spi2-core \
+            libatk-adaptor libgail-common gsettings-desktop-schemas dconf-cli galculator \
+            tesseract-ocr tesseract-ocr-eng fonts-dejavu-core jq > /dev/null
+
+      - name: Install aux4 CLI
+        run: |
+          curl -fsSL https://aux4.sh | sh
+          export PATH="$HOME/.aux4.config/packages/aux4/aux4:$PATH"
+          echo "$HOME/.aux4.config/packages/aux4/aux4" >> "$GITHUB_PATH"
+          curl -fsSL https://pkger.aux4.sh | sh
+          aux4 aux4 pkger --help > /dev/null
+
+      - name: Install aux4/computer-linux from the dev hub
+        run: |
+          aux4 aux4 pkger install aux4/computer-linux aux4/test
+          aux4 aux4 pkger list | grep -E 'aux4/computer'
+
+      - name: Start the X11 session
+        run: bash ci/session.sh
+
+      - name: Verify the installed package
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          aux4 computer linux info | tee info.json
+          jq -e --arg v "$EXPECTED_VERSION" '.provider == "linux" and .contract == 1 and .version == $v and .capabilities.background and .capabilities.ocr' info.json > /dev/null
+          aux4 computer providers | tee providers.json
+          jq -e '[.providers[] | select(.provider == "linux" and .status == "ok")] | length == 1' providers.json > /dev/null
+          aux4 computer linux open galculator --wait 15s
+          REF=$(aux4 computer linux find "" --role AXButton --app galculator | jq -r '[.matches[] | select(.label == "7")][0].ref')
+          aux4 computer linux click --element "$REF" --app galculator | tee click.json
+          jq -e '.mode == "background" and .element.label == "7"' click.json > /dev/null
+          # the same through the core's OS dispatch
+          aux4 computer find 7 --role text --app galculator | tee find.json
+          jq -e '[.matches[] | select(.value == "7")] | length > 0' find.json > /dev/null
+          aux4 computer ocr --app galculator --text 7 | jq -e '.matches | length > 0' > /dev/null
+          aux4 computer linux quit galculator | jq -e '.terminated' > /dev/null
+          aux4 computer conformance --provider linux
